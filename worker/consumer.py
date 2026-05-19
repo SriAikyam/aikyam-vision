@@ -60,21 +60,15 @@ class VisionWorker:
         entity_id: str | None = payload.get("templeId") or payload.get("entityId")
 
         # Resolve media URLs from assetId using CDN pattern
-        # assetId lives at payload.content.media[].assetId or nested.assetId
+        # media list is at top-level of event: event.media[{assetId, assetType}]
         media_urls: list[str] = []
-        content = nested.get("content", {}) or {}
-        media_list = content.get("media", []) or nested.get("media", []) or []
+        media_list = payload.get("media", []) or []
         for m in media_list:
             asset_id = m.get("assetId") if isinstance(m, dict) else None
             if asset_id:
-                media_type = (m.get("type") or "").upper()
-                ext = "source.mp4" if media_type in ("VIDEO", "REEL") else "source.jpg"
+                asset_type = (m.get("assetType") or "IMAGE").upper()
+                ext = "source.mp4" if asset_type in ("VIDEO", "REEL") else "source.jpg"
                 media_urls.append(f"{self.CDN_BASE}/{asset_id}/{ext}")
-        # fallback: top-level assetId
-        if not media_urls:
-            asset_id = nested.get("assetId") or payload.get("assetId")
-            if asset_id:
-                media_urls.append(f"{self.CDN_BASE}/{asset_id}/source.jpg")
 
         if not post_id:
             return
