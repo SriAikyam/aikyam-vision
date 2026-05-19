@@ -91,7 +91,7 @@ class ClusterMapper:
         self._clip = ClipModel()
         self._whisper = WhisperModel()
 
-    def score_image(self, image_path: str | Path) -> VisionResult:
+    def score_image(self, image_path: str | Path, caption: str = "") -> VisionResult:
         image_path = Path(image_path)
         result = VisionResult()
 
@@ -137,13 +137,17 @@ class ClusterMapper:
             if cluster:
                 gps_scores[cluster] = score
 
+        keyword_scores = _keyword_score(caption)
+
         sources = []
         if clip_result.available and clip_result.scores:
             sources.append("clip")
         if gps_scores:
             sources.append("gps")
+        if keyword_scores:
+            sources.append("keywords")
 
-        result.clusters = _merge(clip=clip_result.scores, keywords={}, gps=gps_scores)
+        result.clusters = _merge(clip=clip_result.scores, keywords=keyword_scores, gps=gps_scores)
         result.confidence = _confidence(result.clusters, sources)
         result.sources = sources
         return result

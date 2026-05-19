@@ -93,7 +93,7 @@ def ready():
 def analyze_image(req: ImageRequest):
     with tempfile.TemporaryDirectory() as tmp:
         path = _download(req.image_url, Path(tmp) / "image.jpg")
-        result: VisionResult = _mapper.score_image(path)
+        result: VisionResult = _mapper.score_image(path, caption=req.caption)
     return _to_response(req.post_id, result)
 
 
