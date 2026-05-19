@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libimage-exiftool-perl \
     ca-certificates \
+    libsnappy-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

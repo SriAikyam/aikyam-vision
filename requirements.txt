@@ -2,6 +2,7 @@ fastapi==0.136.1
 uvicorn==0.34.0
 pydantic==2.13.4
 kafka-python-ng==2.2.3
+python-snappy==0.7.3
 requests==2.32.3
 Pillow==11.2.1
 imagehash==4.3.1
