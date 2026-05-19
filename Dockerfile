@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    libimage-exiftool-perl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,8 +17,8 @@ RUN if [ "$INSTALL_ML" = "true" ]; then pip install --no-cache-dir -r requiremen
 
 COPY . .
 
-# MODE=api starts FastAPI (HTTP analysis endpoints)
-# MODE=worker starts Kafka consumer (post_created → simclusters)
+# MODE=api   → FastAPI HTTP server (direct analysis endpoints)
+# MODE=worker → Kafka consumer (post_created → simclusters)
 ENV MODE=api
 EXPOSE 8000
 
