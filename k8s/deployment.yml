@@ -84,14 +84,16 @@ spec:
             - name: AIKYAM_CLIP_MODEL_ENABLED
               value: "false"
             - name: AIKYAM_WHISPER_MODEL_ENABLED
-              value: "false"
+              value: "true"
+            - name: AIKYAM_WHISPER_MODEL_SIZE
+              value: "tiny"
           resources:
             requests:
-              cpu: 200m
-              memory: 512Mi
+              cpu: 500m
+              memory: 1Gi
             limits:
-              cpu: 1000m
-              memory: 2Gi
+              cpu: 2000m
+              memory: 3Gi
 ---
 apiVersion: v1
 kind: Service

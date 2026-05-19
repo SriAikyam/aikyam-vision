@@ -11,10 +11,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ML models (CLIP + Whisper) are opt-in. Set INSTALL_ML=true in production deployments.
-ARG INSTALL_ML=false
-COPY requirements-ml.txt .
-RUN if [ "$INSTALL_ML" = "true" ]; then pip install --no-cache-dir -r requirements-ml.txt; fi
+# Whisper (CPU-only torch ~300MB) — enable with INSTALL_WHISPER=true
+ARG INSTALL_WHISPER=false
+COPY requirements-whisper.txt .
+RUN if [ "$INSTALL_WHISPER" = "true" ]; then pip install --no-cache-dir -r requirements-whisper.txt; fi
+
+# CLIP (full torch + transformers ~2GB) — enable with INSTALL_CLIP=true
+ARG INSTALL_CLIP=false
+COPY requirements-clip.txt .
+RUN if [ "$INSTALL_CLIP" = "true" ]; then pip install --no-cache-dir -r requirements-clip.txt; fi
 
 COPY . .
 
