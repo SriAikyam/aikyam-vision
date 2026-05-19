@@ -50,15 +50,31 @@ class VisionWorker:
         for message in self._consumer:
             self._handle(message.value)
 
+    CDN_BASE = "https://cdn.shriaikyam.com/media"
+
     def _handle(self, payload: dict):
         post_id: str = payload.get("postId", "") or payload.get("entityId", "")
 
-        # Correct field names from aikyam.post.created event schema
         nested   = payload.get("payload", {}) or {}
         caption: str = nested.get("postText", "") or payload.get("text", "") or ""
-        image_url: str | None = nested.get("postImageUrl")
-        media_urls: list[str] = [image_url] if image_url else []
         entity_id: str | None = payload.get("templeId") or payload.get("entityId")
+
+        # Resolve media URLs from assetId using CDN pattern
+        # assetId lives at payload.content.media[].assetId or nested.assetId
+        media_urls: list[str] = []
+        content = nested.get("content", {}) or {}
+        media_list = content.get("media", []) or nested.get("media", []) or []
+        for m in media_list:
+            asset_id = m.get("assetId") if isinstance(m, dict) else None
+            if asset_id:
+                media_type = (m.get("type") or "").upper()
+                ext = "source.mp4" if media_type in ("VIDEO", "REEL") else "source.jpg"
+                media_urls.append(f"{self.CDN_BASE}/{asset_id}/{ext}")
+        # fallback: top-level assetId
+        if not media_urls:
+            asset_id = nested.get("assetId") or payload.get("assetId")
+            if asset_id:
+                media_urls.append(f"{self.CDN_BASE}/{asset_id}/source.jpg")
 
         if not post_id:
             return

@@ -19,3 +19,5 @@ CLIP_SCORE_THRESHOLD = float(os.getenv("AIKYAM_CLIP_SCORE_THRESHOLD", "0.20"))
 VIDEO_FRAME_COUNT = int(os.getenv("AIKYAM_VIDEO_FRAME_COUNT", "5"))
 
 HTTP_TIMEOUT_SECONDS = int(os.getenv("AIKYAM_HTTP_TIMEOUT_SECONDS", "10"))
+
+MEDIA_SERVICE_URL = os.getenv("MEDIA_SERVICE_URL", "http://aikyam-media-control-plane:8080")
