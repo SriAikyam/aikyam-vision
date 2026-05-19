@@ -16,6 +16,11 @@ class WhisperResult:
 
 
 class WhisperModel:
+    """
+    Uses faster-whisper (CTranslate2 backend) — no PyTorch required,
+    4x faster than openai-whisper on CPU, ~50MB install.
+    """
+
     def __init__(self):
         self._model = None
         self._load_error: str | None = None
@@ -28,22 +33,28 @@ class WhisperModel:
         if model is None:
             return WhisperResult(
                 available=False,
-                model_name=f"whisper-{WHISPER_MODEL_SIZE}",
+                model_name=f"faster-whisper-{WHISPER_MODEL_SIZE}",
                 error=self._load_error,
             )
 
         try:
-            result = model.transcribe(str(audio_path), task="transcribe")
+            segments, info = model.transcribe(
+                str(audio_path),
+                task="transcribe",
+                beam_size=1,           # fastest on CPU
+                vad_filter=True,       # skip silence, speeds up religious content
+            )
+            text = " ".join(s.text.strip() for s in segments).strip()
             return WhisperResult(
                 available=True,
-                text=result.get("text", "").strip(),
-                language=result.get("language", ""),
-                model_name=f"whisper-{WHISPER_MODEL_SIZE}",
+                text=text,
+                language=info.language,
+                model_name=f"faster-whisper-{WHISPER_MODEL_SIZE}",
             )
         except Exception as exc:
             return WhisperResult(
                 available=False,
-                model_name=f"whisper-{WHISPER_MODEL_SIZE}",
+                model_name=f"faster-whisper-{WHISPER_MODEL_SIZE}",
                 error=str(exc),
             )
 
@@ -53,8 +64,12 @@ class WhisperModel:
         if self._load_error is not None:
             return None
         try:
-            import whisper
-            self._model = whisper.load_model(WHISPER_MODEL_SIZE)
+            from faster_whisper import WhisperModel as FasterWhisperModel
+            self._model = FasterWhisperModel(
+                WHISPER_MODEL_SIZE,
+                device="cpu",
+                compute_type="int8",   # quantised — fastest CPU inference
+            )
             return self._model
         except Exception as exc:
             self._load_error = str(exc)
@@ -67,6 +82,6 @@ class WhisperModel:
         return {
             "enabled": True,
             "available": model is not None,
-            "model": f"whisper-{WHISPER_MODEL_SIZE}",
+            "model": f"faster-whisper-{WHISPER_MODEL_SIZE}",
             "error": self._load_error,
         }
