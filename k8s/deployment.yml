@@ -1,0 +1,106 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aikyam-vision-api
+  namespace: aikyam-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aikyam-vision-api
+  template:
+    metadata:
+      labels:
+        app: aikyam-vision-api
+    spec:
+      containers:
+        - name: aikyam-vision-api
+          image: ghcr.io/sriaikyam/aikyam-vision:dev-latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODE
+              value: api
+            - name: SIMCLUSTERS_BASE_URL
+              value: http://aikyam-simclusters:8080
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: aikyam-vision-secret
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: AIKYAM_CLIP_MODEL_ENABLED
+              value: "false"
+            - name: AIKYAM_WHISPER_MODEL_ENABLED
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aikyam-vision-worker
+  namespace: aikyam-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aikyam-vision-worker
+  template:
+    metadata:
+      labels:
+        app: aikyam-vision-worker
+    spec:
+      containers:
+        - name: aikyam-vision-worker
+          image: ghcr.io/sriaikyam/aikyam-vision:dev-latest
+          env:
+            - name: MODE
+              value: worker
+            - name: SIMCLUSTERS_BASE_URL
+              value: http://aikyam-simclusters:8080
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: aikyam-vision-secret
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: AIKYAM_CLIP_MODEL_ENABLED
+              value: "false"
+            - name: AIKYAM_WHISPER_MODEL_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aikyam-vision
+  namespace: aikyam-dev
+spec:
+  selector:
+    app: aikyam-vision-api
+  ports:
+    - port: 8010
+      targetPort: 8000

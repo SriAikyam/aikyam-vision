@@ -1,0 +1,40 @@
+name: Release container image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag (e.g. dev-latest, 1.0.0)"
+        required: true
+        default: "dev-latest"
+      install_ml:
+        description: "Bundle ML models (CLIP + Whisper) in image"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: |
+            INSTALL_ML=${{ github.event.inputs.install_ml }}
+          tags: ghcr.io/sriaikyam/aikyam-vision:${{ github.event.inputs.image_tag }}
