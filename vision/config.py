@@ -1,10 +1,10 @@
 import os
 
 
-SIMCLUSTERS_BASE_URL = os.getenv("SIMCLUSTERS_BASE_URL", "http://localhost:8080")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 KAFKA_CONSUMER_GROUP = os.getenv("KAFKA_CONSUMER_GROUP", "aikyam-vision-v1")
-POST_CREATED_TOPIC = os.getenv("POST_CREATED_TOPIC", "post.created")
+POST_CREATED_TOPIC = os.getenv("POST_CREATED_TOPIC", "aikyam.post.created")
+VISION_SCORES_TOPIC = os.getenv("VISION_SCORES_TOPIC", "aikyam.vision.scores")
 
 CLIP_MODEL_ENABLED = os.getenv("AIKYAM_CLIP_MODEL_ENABLED", "false").lower() == "true"
 CLIP_MODEL_NAME = os.getenv("AIKYAM_CLIP_MODEL_NAME", "openai/clip-vit-base-patch32")
