@@ -14,27 +14,88 @@ from vision.whisper_model import WhisperModel, WhisperResult
 
 # Lightweight keyword→cluster mapping used when CLIP is disabled or for text signals.
 _KEYWORD_CLUSTERS: dict[str, list[tuple[str, float]]] = {
-    "cluster_01": [("shiva", 1.0), ("lingam", 0.9), ("mahadeva", 0.9), ("shankar", 0.9),
-                   ("kedarnath", 0.8), ("shivaratri", 0.9), ("nataraja", 0.8), ("bhole", 0.7)],
-    "cluster_03": [("krishna", 1.0), ("govinda", 0.9), ("radha", 0.9), ("vrindavan", 0.8),
-                   ("jagannath", 0.9), ("hare krishna", 1.0), ("bal gopal", 0.8)],
-    "cluster_06": [("vishnu", 1.0), ("venkateswara", 0.9), ("tirupati", 0.8), ("narayana", 0.9)],
-    "cluster_15": [("hanuman", 1.0), ("bajrangbali", 0.9), ("sankat mochan", 0.8)],
-    "cluster_29": [("ram", 0.8), ("sita", 0.8), ("ramayana", 0.9), ("ayodhya", 0.9)],
-    "cluster_48": [("ganesh", 1.0), ("ganapati", 0.9), ("chaturthi", 0.9), ("modak", 0.7)],
-    "cluster_49": [("saraswati", 1.0), ("basant panchami", 0.9)],
-    "cluster_50": [("sai baba", 1.0), ("shirdi", 0.9)],
-    "cluster_51": [("ayyappa", 1.0), ("sabarimala", 0.9)],
-    "cluster_52": [("murugan", 1.0), ("karthikeya", 0.9), ("kavadi", 0.8)],
-    "cluster_53": [("aarti", 0.9), ("puja", 0.9), ("prasad", 0.8), ("archana", 0.8)],
-    "cluster_54": [("temple", 0.6), ("gopuram", 0.9), ("mandir", 0.7), ("shikhara", 0.8)],
-    "cluster_55": [("diwali", 1.0), ("holi", 1.0), ("navratri", 0.9), ("dussehra", 0.9)],
-    "cluster_56": [("yoga", 0.8), ("meditation", 0.8), ("rishikesh", 0.9), ("ashram", 0.7)],
-    "cluster_57": [("bhajan", 1.0), ("kirtan", 1.0), ("satsang", 0.9), ("bhakti", 0.8)],
-    "cluster_59": [("pilgrimage", 0.8), ("char dham", 1.0), ("kumbh mela", 1.0), ("yatra", 0.8)],
-    "cluster_60": [("vedic", 0.9), ("sanskrit", 0.8), ("guru", 0.7), ("upanishad", 0.9)],
-    "cluster_61": [("prasad", 0.8), ("laddoo", 0.8), ("bhog", 0.9)],
-    "cluster_63": [("jyotish", 1.0), ("panchang", 1.0), ("rashi", 0.8), ("nakshatra", 0.8)],
+    "cluster_01": [
+        ("shiva", 1.0), ("lingam", 0.9), ("mahadeva", 0.9), ("mahadev", 0.9),
+        ("shankar", 0.9), ("kedarnath", 0.8), ("shivaratri", 0.9), ("nataraja", 0.8),
+        ("bhole", 0.7), ("kashi", 0.8), ("vishwanath", 0.8), ("varanasi", 0.8),
+        ("trinetra", 0.7), ("pashupatinath", 0.8), ("somnath", 0.8),
+    ],
+    "cluster_03": [
+        ("krishna", 1.0), ("govinda", 0.9), ("radha", 0.9), ("vrindavan", 0.8),
+        ("mathura", 0.8), ("jagannath", 0.9), ("hare krishna", 1.0), ("bal gopal", 0.8),
+        ("dwaraka", 0.8), ("dwarka", 0.8), ("gopal", 0.8), ("kanhaiya", 0.8),
+        ("govardhan", 0.8), ("brij", 0.7),
+    ],
+    "cluster_06": [
+        ("vishnu", 1.0), ("venkateswara", 0.9), ("tirupati", 0.8), ("narayana", 0.9),
+        ("balaji", 0.9), ("padmanabha", 0.8), ("trivandrum", 0.7), ("guruvayur", 0.8),
+    ],
+    "cluster_15": [
+        ("hanuman", 1.0), ("bajrangbali", 0.9), ("sankat mochan", 0.8),
+        ("anjaneya", 0.9), ("maruti", 0.8), ("pawanputra", 0.8),
+    ],
+    "cluster_29": [
+        ("ram", 0.8), ("rama", 0.9), ("sita", 0.8), ("ramayana", 0.9),
+        ("ayodhya", 0.9), ("ramnavami", 0.9), ("jai shree ram", 1.0),
+        ("laxman", 0.7), ("janki", 0.8),
+    ],
+    "cluster_48": [
+        ("ganesh", 1.0), ("ganesha", 1.0), ("ganapati", 0.9), ("chaturthi", 0.9),
+        ("modak", 0.7), ("siddhivinayak", 0.9), ("vinayaka", 0.8), ("ekdanta", 0.8),
+    ],
+    "cluster_49": [
+        ("saraswati", 1.0), ("basant panchami", 0.9), ("saraswathi", 1.0),
+        ("vagdevi", 0.8),
+    ],
+    "cluster_50": [
+        ("sai baba", 1.0), ("shirdi", 0.9), ("sai", 0.7), ("sainath", 0.9),
+    ],
+    "cluster_51": [
+        ("ayyappa", 1.0), ("sabarimala", 0.9), ("swamiye saranam", 1.0),
+        ("makaravilakku", 0.9),
+    ],
+    "cluster_52": [
+        ("murugan", 1.0), ("karthikeya", 0.9), ("kavadi", 0.8),
+        ("skanda", 0.8), ("palani", 0.8), ("vel", 0.7),
+    ],
+    "cluster_53": [
+        ("aarti", 0.9), ("puja", 0.9), ("prasad", 0.8), ("archana", 0.8),
+        ("abhishek", 0.8), ("darshan", 0.7), ("deepam", 0.8), ("homam", 0.8),
+        ("havan", 0.8), ("pooja", 0.9),
+    ],
+    "cluster_54": [
+        ("temple", 0.6), ("gopuram", 0.9), ("mandir", 0.7), ("shikhara", 0.8),
+        ("sanctum", 0.7), ("garbhagriha", 0.9), ("vimana", 0.8),
+    ],
+    "cluster_55": [
+        ("diwali", 1.0), ("holi", 1.0), ("navratri", 0.9), ("dussehra", 0.9),
+        ("dasara", 0.9), ("ganesh chaturthi", 1.0), ("onam", 0.9), ("pongal", 0.9),
+        ("ugadi", 0.9), ("baisakhi", 0.9), ("chhath", 0.9), ("lohri", 0.8),
+    ],
+    "cluster_56": [
+        ("yoga", 0.8), ("meditation", 0.8), ("rishikesh", 0.9), ("ashram", 0.7),
+        ("pranayama", 0.9), ("dhyana", 0.9), ("sadhana", 0.8), ("tapas", 0.7),
+    ],
+    "cluster_57": [
+        ("bhajan", 1.0), ("kirtan", 1.0), ("satsang", 0.9), ("bhakti", 0.8),
+        ("aaradhana", 0.8), ("stotram", 0.8), ("chalisa", 0.9), ("stotra", 0.8),
+    ],
+    "cluster_59": [
+        ("pilgrimage", 0.8), ("char dham", 1.0), ("kumbh mela", 1.0), ("yatra", 0.8),
+        ("tirth", 0.8), ("tirtha", 0.8), ("parikrama", 0.9), ("pradakshina", 0.8),
+    ],
+    "cluster_60": [
+        ("vedic", 0.9), ("sanskrit", 0.8), ("guru", 0.7), ("upanishad", 0.9),
+        ("veda", 0.9), ("shastra", 0.8), ("pandit", 0.7), ("acharya", 0.7),
+    ],
+    "cluster_61": [
+        ("prasad", 0.8), ("laddoo", 0.8), ("bhog", 0.9), ("naivedyam", 0.9),
+        ("panchamrit", 0.8), ("kheer", 0.6),
+    ],
+    "cluster_63": [
+        ("jyotish", 1.0), ("panchang", 1.0), ("rashi", 0.8), ("nakshatra", 0.8),
+        ("kundali", 0.9), ("horoscope", 0.7), ("muhurat", 0.9), ("graha", 0.8),
+    ],
 }
 
 

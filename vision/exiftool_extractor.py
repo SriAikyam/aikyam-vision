@@ -5,12 +5,13 @@ import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# AI generator signatures found in EXIF Software / XMP CreatorTool / Parameters fields
+# AI generator signatures — ordered longest first so substring matches don't double-fire.
+# "stable diffusion" must precede "diffusion"; "automatic1111" before any fragment.
 _AI_SIGNATURES = [
-    "midjourney", "dall-e", "dalle", "stable diffusion", "stablediffusion",
-    "comfyui", "automatic1111", "novelai", "adobe firefly", "canva ai",
-    "imagen", "ideogram", "leonardo", "kling", "runwayml", "pika",
-    "diffusion", "generative",
+    "stable diffusion", "stablediffusion", "automatic1111",
+    "midjourney", "adobe firefly", "canva ai", "dall-e", "dalle",
+    "comfyui", "novelai", "imagen", "ideogram", "leonardo",
+    "runwayml", "pika", "generative",
 ]
 
 # Exact round dimensions common in AI-generated images
@@ -133,7 +134,10 @@ def _fill_fields(result: ExifToolResult, raw: dict):
 
     has_camera = bool(result.camera_make or result.camera_model)
     has_timestamps = bool(result.date_time_original or result.create_date)
-    result.metadata_stripped = not has_camera and not has_timestamps and len(raw) < 5
+    has_gps = result.gps_lat is not None
+    # JFIF-only JPEGs have no camera/timestamp/GPS even with a few PIL header keys.
+    # True stripped = meaningful EXIF absent (camera, timestamp, GPS all missing).
+    result.metadata_stripped = not has_camera and not has_timestamps and not has_gps
 
 
 def _detect_ai(result: ExifToolResult, path: Path):
@@ -148,9 +152,17 @@ def _detect_ai(result: ExifToolResult, path: Path):
     ]
     combined = " ".join(str(f) for f in fields_to_check if f).lower()
 
+    # Scan longest signatures first; once a position is consumed skip shorter overlaps
+    matched_spans: list[tuple[int, int]] = []
     for sig in _AI_SIGNATURES:
-        if sig in combined:
-            signals.append(f"metadata:{sig}")
+        idx = combined.find(sig)
+        if idx == -1:
+            continue
+        end = idx + len(sig)
+        if any(s <= idx < e or s < end <= e for s, e in matched_spans):
+            continue  # overlaps an already-matched signature
+        matched_spans.append((idx, end))
+        signals.append(f"metadata:{sig}")
 
     if result.c2pa_present:
         signals.append("c2pa_manifest")
