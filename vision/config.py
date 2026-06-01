@@ -12,8 +12,10 @@ CLIP_MODEL_NAME = os.getenv("AIKYAM_CLIP_MODEL_NAME", "openai/clip-vit-base-patc
 WHISPER_MODEL_ENABLED = os.getenv("AIKYAM_WHISPER_MODEL_ENABLED", "false").lower() == "true"
 WHISPER_MODEL_SIZE = os.getenv("AIKYAM_WHISPER_MODEL_SIZE", "tiny")
 
-# Min CLIP cosine similarity to count a cluster as matched
-CLIP_SCORE_THRESHOLD = float(os.getenv("AIKYAM_CLIP_SCORE_THRESHOLD", "0.20"))
+# Min shared-softmax CLIP score to count a cluster as matched.
+# This is lower than the old per-cluster threshold because all prompts now compete together.
+CLIP_SCORE_THRESHOLD = float(os.getenv("AIKYAM_CLIP_SCORE_THRESHOLD", "0.005"))
+CLIP_TOP_K = int(os.getenv("AIKYAM_CLIP_TOP_K", "5"))
 
 # Max frames extracted from video for CLIP scoring
 VIDEO_FRAME_COUNT = int(os.getenv("AIKYAM_VIDEO_FRAME_COUNT", "5"))
