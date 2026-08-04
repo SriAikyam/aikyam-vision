@@ -96,7 +96,29 @@ _KEYWORD_CLUSTERS: dict[str, list[tuple[str, float]]] = {
         ("jyotish", 1.0), ("panchang", 1.0), ("rashi", 0.8), ("nakshatra", 0.8),
         ("kundali", 0.9), ("horoscope", 0.7), ("muhurat", 0.9), ("graha", 0.8),
     ],
+    "modern_vehicles": [
+        ("car", 1.0), ("vehicle", 0.9), ("suv", 0.9), ("truck", 0.9),
+        ("bike", 0.8), ("motorcycle", 0.9),
+    ],
+    "modern_nightlife_and_parties": [
+        ("party", 1.0), ("pub", 0.9), ("club", 0.9), ("nightlife", 0.9),
+        ("celebration", 0.9), ("celebrating", 0.9), ("dancing", 0.7), ("dj", 0.8),
+    ],
+    "spam_and_promotions": [
+        ("promo", 1.0), ("discount", 0.9), ("buy now", 1.0), ("coupon", 1.0),
+        ("offer", 0.8),
+    ],
+    "explicit_and_inappropriate": [
+        ("nude", 1.0), ("naked", 1.0), ("explicit", 1.0), ("porn", 1.0), ("bikini", 0.8),
+    ],
+    "violence_and_harm": [
+        ("kill", 1.0), ("blood", 0.9), ("weapon", 1.0), ("gun", 1.0),
+    ],
+    "hate_speech": [
+        ("hate", 1.0), ("fuck", 1.0), ("bitch", 1.0), ("bastard", 1.0), ("slur", 1.0),
+    ],
 }
+from vision.moderation import evaluate_moderation
 
 
 @dataclass
@@ -145,6 +167,12 @@ class VisionResult:
     thumbnail_path: Path | None = None
 
     transcript: str = ""
+    image_embedding: list[float] | None = None
+    primary_deity: str | None = None
+    category_type_scores: dict[str, float] = field(default_factory=dict)
+    flagged: bool = False
+    moderation_action: str = "ALLOW"
+    moderation_reasons: list[str] = field(default_factory=list)
 
 
 class ClusterMapper:
@@ -211,6 +239,14 @@ class ClusterMapper:
         result.clusters = _merge(clip=clip_result.scores, keywords=keyword_scores, gps=gps_scores)
         result.confidence = _confidence(result.clusters, sources)
         result.sources = sources
+        result.image_embedding = clip_result.image_embedding
+
+        mod = evaluate_moderation(result.clusters)
+        result.flagged = mod.flagged
+        result.moderation_action = mod.action
+        result.moderation_reasons = mod.reasons
+        result.primary_deity = mod.primary_deity
+        result.category_type_scores = mod.category_type_scores
         return result
 
     def score_video(self, video_path: str | Path, caption: str = "") -> VisionResult:
@@ -238,11 +274,21 @@ class ClusterMapper:
             result.sample_rate_hz = meta.audio.sample_rate_hz
 
         clip_scores: dict[str, float] = {}
+        best_frame_embedding: list[float] | None = None
+        best_frame_score: float = -1.0
+
         if meta.frame_paths:
             for frame in meta.frame_paths:
                 frame_result: ClipResult = self._clip.score_image(frame)
+                frame_max = max(frame_result.scores.values()) if frame_result.scores else 0.0
+                if frame_result.image_embedding and (best_frame_embedding is None or frame_max > best_frame_score):
+                    best_frame_score = frame_max
+                    best_frame_embedding = frame_result.image_embedding
+
                 for cid, score in frame_result.scores.items():
                     clip_scores[cid] = max(clip_scores.get(cid, 0.0), score)
+
+        result.image_embedding = best_frame_embedding
 
         whisper_result: WhisperResult = WhisperResult(available=False)
         if meta.audio_path:
@@ -272,6 +318,13 @@ class ClusterMapper:
         result.clusters = _merge(clip=clip_scores, keywords=keyword_scores, gps=gps_scores)
         result.confidence = _confidence(result.clusters, sources)
         result.sources = sources
+
+        mod = evaluate_moderation(result.clusters)
+        result.flagged = mod.flagged
+        result.moderation_action = mod.action
+        result.moderation_reasons = mod.reasons
+        result.primary_deity = mod.primary_deity
+        result.category_type_scores = mod.category_type_scores
         return result
 
     def score_text(self, caption: str) -> VisionResult:
@@ -281,6 +334,12 @@ class ClusterMapper:
             confidence=_confidence(keyword_scores, ["keywords"] if keyword_scores else []),
             sources=["keywords"] if keyword_scores else [],
         )
+        mod = evaluate_moderation(result.clusters)
+        result.flagged = mod.flagged
+        result.moderation_action = mod.action
+        result.moderation_reasons = mod.reasons
+        result.primary_deity = mod.primary_deity
+        result.category_type_scores = mod.category_type_scores
         return result
 
     def readiness(self) -> dict:

@@ -77,6 +77,12 @@ class VisionResponse(BaseModel):
     device_make: str | None = None
     device_model: str | None = None
     transcript: str = ""
+    image_embedding: list[float] | None = None
+    primary_deity: str | None = None
+    category_type_scores: dict[str, float] = {}
+    flagged: bool = False
+    moderation_action: str = "ALLOW"
+    moderation_reasons: list[str] = []
 
 
 @app.get("/health")
@@ -114,7 +120,14 @@ def analyze_text(req: TextRequest):
 
 def _download(url: str, dest: Path) -> Path:
     try:
-        urllib.request.urlretrieve(url, dest)
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            },
+        )
+        with urllib.request.urlopen(req) as resp, open(dest, "wb") as out:
+            out.write(resp.read())
         return dest
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to download media: {exc}")
@@ -156,4 +169,10 @@ def _to_response(post_id: str, r: VisionResult) -> VisionResponse:
         device_make=r.device_make,
         device_model=r.device_model,
         transcript=r.transcript,
+        image_embedding=r.image_embedding,
+        primary_deity=r.primary_deity,
+        category_type_scores=r.category_type_scores,
+        flagged=r.flagged,
+        moderation_action=r.moderation_action,
+        moderation_reasons=r.moderation_reasons,
     )

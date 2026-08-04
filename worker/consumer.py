@@ -11,9 +11,13 @@ from kafka import KafkaConsumer, KafkaProducer
 from vision.cluster_mapper import ClusterMapper, VisionResult
 from vision.config import (
     KAFKA_BOOTSTRAP_SERVERS,
+    KAFKA_CONSUMER_BOOTSTRAP_SERVERS,
+    KAFKA_PRODUCER_BOOTSTRAP_SERVERS,
     KAFKA_CONSUMER_GROUP,
+    KAFKA_AUTO_OFFSET_RESET,
     POST_CREATED_TOPIC,
     VISION_SCORES_TOPIC,
+    AIKYAM_CDN_BASE_URL,
 )
 
 logger = logging.getLogger("aikyam.vision.worker")
@@ -29,28 +33,61 @@ class VisionWorker:
     """
 
     def __init__(self):
-        self._consumer = KafkaConsumer(
-            POST_CREATED_TOPIC,
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            group_id=KAFKA_CONSUMER_GROUP,
-            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            auto_offset_reset="latest",
-            enable_auto_commit=True,
-        )
-        self._producer = KafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-            acks=1,
-            retries=3,
-        )
+        import time
+        from kafka.errors import NoBrokersAvailable
+
+        logger.info("Initializing VisionWorker, connecting to Kafka...")
+        for attempt in range(1, 6):
+            try:
+                self._consumer = KafkaConsumer(
+                    POST_CREATED_TOPIC,
+                    bootstrap_servers=KAFKA_CONSUMER_BOOTSTRAP_SERVERS,
+                    group_id=KAFKA_CONSUMER_GROUP,
+                    auto_offset_reset=KAFKA_AUTO_OFFSET_RESET,
+                    enable_auto_commit=True,
+                    api_version=(2, 8, 0),
+                )
+                self._producer = KafkaProducer(
+                    bootstrap_servers=KAFKA_PRODUCER_BOOTSTRAP_SERVERS,
+                    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                    acks=1,
+                    retries=3,
+                )
+                logger.info("Successfully connected to Kafka!")
+                break
+            except NoBrokersAvailable as e:
+                if attempt == 5:
+                    logger.error("Failed to connect to Kafka after 5 attempts.")
+                    raise e
+                logger.warning("Kafka not ready yet (attempt %d/5), retrying in 5 seconds...", attempt)
+                time.sleep(5)
         self._mapper = ClusterMapper()
 
     def start(self):
         logger.info("Vision worker started, listening on %s", POST_CREATED_TOPIC)
         for message in self._consumer:
-            self._handle(message.value)
+            try:
+                if not message.value:
+                    continue
+                payload = json.loads(message.value.decode("utf-8"))
+                logger.info("kafka_event_consumed topic=%s post_id=%s", POST_CREATED_TOPIC, payload.get("postId") or payload.get("entityId"))
+                self._handle(payload)
+            except Exception as exc:
+                logger.error("Failed to deserialize or process message: %s", exc)
 
-    CDN_BASE = "https://cdn.shriaikyam.com/media"
+    def _resolve_media_items(self, payload: dict) -> list[tuple[str, str]]:
+        media_items = []
+        media_list = payload.get("media", []) or []
+        for m in media_list:
+            if not isinstance(m, dict):
+                continue
+            asset_id = m.get("assetId")
+            if asset_id:
+                asset_type = (m.get("assetType") or "IMAGE").upper()
+                ext = "source.mp4" if asset_type in ("VIDEO", "REEL") else "source.jpg"
+                url = f"{AIKYAM_CDN_BASE_URL}/{asset_id}/{ext}"
+                media_items.append((url, asset_type))
+        return media_items
 
     def _handle(self, payload: dict):
         post_id: str = payload.get("postId", "") or payload.get("entityId", "")
@@ -59,25 +96,17 @@ class VisionWorker:
         caption: str = nested.get("postText", "") or payload.get("text", "") or ""
         entity_id: str | None = payload.get("templeId") or payload.get("entityId")
 
-        # Resolve media URLs from assetId using CDN pattern
-        # media list is at top-level of event: event.media[{assetId, assetType}]
-        media_urls: list[str] = []
-        media_list = payload.get("media", []) or []
-        for m in media_list:
-            asset_id = m.get("assetId") if isinstance(m, dict) else None
-            if asset_id:
-                asset_type = (m.get("assetType") or "IMAGE").upper()
-                ext = "source.mp4" if asset_type in ("VIDEO", "REEL") else "source.jpg"
-                media_urls.append(f"{self.CDN_BASE}/{asset_id}/{ext}")
+        # Resolve media items from assetId using CDN pattern
+        media_items = self._resolve_media_items(payload)
 
         if not post_id:
             return
 
         result: VisionResult | None = None
 
-        if media_urls:
-            for url in media_urls[:3]:
-                r = self._analyze_url(url, caption)
+        if media_items:
+            for url, asset_type in media_items[:3]:
+                r = self._analyze_media(url, asset_type, caption)
                 if r is not None:
                     result = r
                     break
@@ -96,14 +125,21 @@ class VisionWorker:
 
         self._publish_vision_scores(post_id, result)
 
-    def _analyze_url(self, url: str, caption: str) -> VisionResult | None:
+    def _analyze_media(self, url: str, asset_type: str, caption: str) -> VisionResult | None:
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                lower = url.lower().split("?")[0]
-                is_video = any(lower.endswith(ext) for ext in (".mp4", ".mov", ".avi", ".webm", ".mkv"))
+                is_video = asset_type in ("VIDEO", "REEL")
                 ext = ".mp4" if is_video else ".jpg"
                 dest = Path(tmp) / f"media{ext}"
-                urllib.request.urlretrieve(url, dest)
+
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                    },
+                )
+                with urllib.request.urlopen(req) as resp, open(dest, "wb") as out:
+                    out.write(resp.read())
 
                 if is_video:
                     return self._mapper.score_video(dest, caption=caption)
@@ -113,18 +149,27 @@ class VisionWorker:
             logger.warning("vision_download_failed url=%s error=%s", url, exc)
             return None
 
-    def _publish_vision_scores(self, post_id: str, result: VisionResult):
+    def _publish_vision_scores(self, post_id: str, result: VisionResult, asset_id: str = "", media_type: str = "IMAGE"):
         """
-        Publish cluster scores to Kafka instead of HTTP-POSTing to SimClusters.
-        SimClusters' VisionScoreConsumer merges these into the post's cluster vector.
-        Decoupled: vision doesn't need to know SimClusters is running.
+        Publish cluster scores and embeddings to Kafka.
+        Streams full rich events containing embeddings and scores to VISION_SCORES_TOPIC.
         """
+        import datetime
         message = {
-            "postId":     post_id,
-            "clusters":   result.clusters,
-            "confidence": result.confidence,
-            "phash":      result.phash,
-            "sources":    result.sources,
+            "postId":            post_id,
+            "assetId":           asset_id,
+            "mediaType":         media_type.lower(),
+            "clusters":          result.clusters,
+            "confidence":        result.confidence,
+            "phash":             result.phash,
+            "sources":           result.sources,
+            "imageEmbedding":    result.image_embedding,
+            "primaryDeity":      result.primary_deity,
+            "categoryTypeScores": result.category_type_scores,
+            "flagged":           result.flagged,
+            "moderationAction":  result.moderation_action,
+            "moderationReasons": result.moderation_reasons,
+            "createdAt":         datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         try:
             self._producer.send(VISION_SCORES_TOPIC, value=message, key=post_id.encode())

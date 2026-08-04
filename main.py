@@ -18,9 +18,16 @@ def _worker():
     VisionWorker().start()
 
 
+def _indexer():
+    from worker.qdrant_indexer import QdrantIndexerWorker
+    QdrantIndexerWorker().start()
+
+
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "api"
     if mode == "worker":
         _worker()
+    elif mode == "indexer":
+        _indexer()
     else:
         _api()

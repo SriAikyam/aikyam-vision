@@ -36,6 +36,8 @@ EXPOSE 8000
 
 CMD if [ "$MODE" = "worker" ]; then \
       python main.py worker; \
+    elif [ "$MODE" = "indexer" ]; then \
+      python main.py indexer; \
     else \
       python main.py api; \
     fi

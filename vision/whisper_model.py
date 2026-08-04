@@ -41,7 +41,7 @@ class WhisperModel:
             segments, info = model.transcribe(
                 str(audio_path),
                 task="transcribe",
-                beam_size=1,           # fastest on CPU
+                beam_size=3,           # balanced CPU speed & accuracy
                 vad_filter=True,       # skip silence, speeds up religious content
             )
             text = " ".join(s.text.strip() for s in segments).strip()

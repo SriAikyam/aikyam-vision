@@ -21,7 +21,7 @@ Two modes from the same image, selected by `MODE` env var:
 ## Position in the Pipeline
 
 ```
-Kafka: aikyam.post.created
+Kafka: social.post.created
     └──► aikyam-vision (MODE=worker)
               downloads media URL
               runs: CLIP + keywords + EXIF + GPS + pHash
@@ -57,7 +57,7 @@ Vision NEVER HTTP-calls SimClusters. Fully decoupled via Kafka.
 
 | Topic | Direction | Group |
 |-------|-----------|-------|
-| `aikyam.post.created` | consume | `aikyam-vision-v1` |
+| `social.post.created` | consume | `aikyam-vision-v1` |
 | `aikyam.vision.scores` | publish | — |
 
 ### Vision score message format (published to aikyam.vision.scores)
@@ -97,7 +97,7 @@ Both also need `INSTALL_ML=true` in the `release-image` GitHub Actions workflow.
 
 ## Payload Parsing (Kafka event field names)
 
-The `aikyam.post.created` event has this structure — easy to get wrong:
+The `social.post.created` event has this structure — easy to get wrong:
 
 ```python
 nested    = payload.get("payload", {}) or {}
