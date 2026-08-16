@@ -9,3 +9,7 @@ venv/
 .mypy_cache/
 htmlcov/
 .coverage
+.codebase/
+docker-compose.override.yml
+.idea/
+scratch/

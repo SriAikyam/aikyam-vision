@@ -1,7 +1,6 @@
 import pytest
 
-from vision.cluster_mapper import ClusterMapper, _keyword_score, _merge_scores
-from vision.exif_extractor import ExifResult
+from vision.cluster_mapper import ClusterMapper, _keyword_score, _merge
 
 
 def test_keyword_score_shiva():
@@ -32,21 +31,17 @@ def test_keyword_score_festival():
 
 
 def test_merge_scores_probabilistic_or():
-    exif = ExifResult()
-    merged = _merge_scores(
+    merged = _merge(
         clip={"cluster_01": 0.6},
         keywords={"cluster_01": 0.5},
-        exif=exif,
+        gps={},
     )
     # 1 - (1-0.6)*(1-0.5) = 1 - 0.4*0.5 = 0.8
     assert abs(merged["cluster_01"] - 0.8) < 0.01
 
 
 def test_merge_scores_gps_boost():
-    exif = ExifResult(
-        gps_lat=25.31, gps_lon=83.01, sacred_cluster="cluster_01", sacred_score=0.9
-    )
-    merged = _merge_scores(clip={}, keywords={}, exif=exif)
+    merged = _merge(clip={}, keywords={}, gps={"cluster_01": 0.9})
     assert "cluster_01" in merged
     assert merged["cluster_01"] >= 0.9
 

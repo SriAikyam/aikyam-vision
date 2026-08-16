@@ -17,10 +17,15 @@ ARG INSTALL_WHISPER=false
 COPY requirements-whisper.txt .
 RUN if [ "$INSTALL_WHISPER" = "true" ]; then pip install --no-cache-dir -r requirements-whisper.txt; fi
 
-# CLIP (full torch + transformers ~2GB) — enable with INSTALL_CLIP=true
+# CLIP — enable with INSTALL_CLIP=true.
+# Install CPU-only torch explicitly; default PyPI torch pulls large CUDA wheels
+# that are unnecessary for local CPU inference and can timeout during Docker builds.
 ARG INSTALL_CLIP=false
 COPY requirements-clip.txt .
-RUN if [ "$INSTALL_CLIP" = "true" ]; then pip install --no-cache-dir -r requirements-clip.txt; fi
+RUN if [ "$INSTALL_CLIP" = "true" ]; then \
+      pip install --no-cache-dir --timeout 120 --retries 5 --index-url https://download.pytorch.org/whl/cpu torch && \
+      pip install --no-cache-dir --timeout 120 --retries 5 -r requirements-clip.txt; \
+    fi
 
 COPY . .
 
@@ -31,6 +36,8 @@ EXPOSE 8000
 
 CMD if [ "$MODE" = "worker" ]; then \
       python main.py worker; \
+    elif [ "$MODE" = "indexer" ]; then \
+      python main.py indexer; \
     else \
       python main.py api; \
     fi

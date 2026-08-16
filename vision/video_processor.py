@@ -98,16 +98,31 @@ def _ffprobe(path: Path) -> dict | None:
         return None
 
 
+def _safe_float(val, default: float = 0.0) -> float:
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(val, default: int = 0) -> int:
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def _fill_metadata(meta: VideoMetadata, probe: dict):
     fmt = probe.get("format", {})
     tags = fmt.get("tags", {})
 
     meta.format_name = fmt.get("format_name")
-    meta.duration_seconds = float(fmt.get("duration", 0))
-    meta.size_bytes = int(fmt.get("size", 0))
+    meta.duration_seconds = _safe_float(fmt.get("duration"), 0.0)
+    meta.size_bytes = _safe_int(fmt.get("size"), 0)
     bit_rate = fmt.get("bit_rate")
     if bit_rate:
-        meta.overall_bit_rate_kbps = int(bit_rate) // 1000
+        bit_rate_val = _safe_int(bit_rate, 0)
+        meta.overall_bit_rate_kbps = bit_rate_val // 1000 if bit_rate_val > 0 else None
 
     meta.creation_time = tags.get("creation_time")
 
@@ -136,6 +151,9 @@ def _fill_metadata(meta: VideoMetadata, probe: dict):
             tags_s = stream.get("tags", {})
             meta.track_creation_time = tags_s.get("creation_time") or meta.track_creation_time
             fps = _parse_fps(stream.get("r_frame_rate", "0/1"))
+            bit_rate_raw = stream.get("bit_rate")
+            bit_rate_val = _safe_int(bit_rate_raw, 0)
+            bit_rate_kbps = bit_rate_val // 1000 if bit_rate_val > 0 else None
             meta.video = VideoStream(
                 codec=stream.get("codec_name"),
                 width=stream.get("width"),
@@ -143,14 +161,17 @@ def _fill_metadata(meta: VideoMetadata, probe: dict):
                 fps=fps,
                 pixel_format=stream.get("pix_fmt"),
                 color_space=stream.get("color_space"),
-                bit_rate_kbps=int(stream.get("bit_rate", 0) or 0) // 1000 or None,
+                bit_rate_kbps=bit_rate_kbps,
             )
         elif codec_type == "audio" and not meta.audio.codec:
+            bit_rate_raw = stream.get("bit_rate")
+            bit_rate_val = _safe_int(bit_rate_raw, 0)
+            bit_rate_kbps = bit_rate_val // 1000 if bit_rate_val > 0 else None
             meta.audio = AudioStream(
                 codec=stream.get("codec_name"),
-                sample_rate_hz=int(stream.get("sample_rate", 0) or 0) or None,
+                sample_rate_hz=_safe_int(stream.get("sample_rate"), 0) or None,
                 channels=stream.get("channels"),
-                bit_rate_kbps=int(stream.get("bit_rate", 0) or 0) // 1000 or None,
+                bit_rate_kbps=bit_rate_kbps,
             )
 
 
@@ -161,13 +182,17 @@ def _extract_frames(meta: VideoMetadata, video_path: Path, tmp: Path):
     for i in range(VIDEO_FRAME_COUNT):
         t = duration * (i / max(VIDEO_FRAME_COUNT - 1, 1))
         out = tmp / f"frame_{i:02d}.jpg"
-        result = subprocess.run(
-            ["ffmpeg", "-ss", str(t), "-i", str(video_path),
-             "-frames:v", "1", "-q:v", "2", str(out), "-y"],
-            capture_output=True, timeout=30,
-        )
-        if result.returncode == 0 and out.exists():
-            frame_paths.append(out)
+        try:
+            result = subprocess.run(
+                ["ffmpeg", "-ss", str(t), "-i", str(video_path),
+                 "-frames:v", "1", "-q:v", "2", str(out), "-y"],
+                capture_output=True, timeout=30,
+            )
+            if result.returncode == 0 and out.exists():
+                frame_paths.append(out)
+        except Exception as exc:
+            meta.error = f"ffmpeg frame extraction failed: {exc}"
+            break
 
     meta.frame_paths = frame_paths
     if frame_paths:
@@ -177,14 +202,17 @@ def _extract_frames(meta: VideoMetadata, video_path: Path, tmp: Path):
 
 def _extract_audio(meta: VideoMetadata, video_path: Path, tmp: Path):
     audio_out = tmp / "audio.wav"
-    result = subprocess.run(
-        ["ffmpeg", "-i", str(video_path), "-vn",
-         "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
-         str(audio_out), "-y"],
-        capture_output=True, timeout=120,
-    )
-    if result.returncode == 0 and audio_out.exists():
-        meta.audio_path = audio_out
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-i", str(video_path), "-vn",
+             "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+             str(audio_out), "-y"],
+            capture_output=True, timeout=120,
+        )
+        if result.returncode == 0 and audio_out.exists():
+            meta.audio_path = audio_out
+    except Exception as exc:
+        meta.error = f"ffmpeg audio extraction failed: {exc}"
 
 
 def _parse_fps(rate_str: str) -> float | None:
