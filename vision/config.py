@@ -17,7 +17,7 @@ QDRANT_COLLECTION = os.getenv("AIKYAM_QDRANT_COLLECTION", "aikyam_vision_media")
 QDRANT_CONSUMER_GROUP = os.getenv("AIKYAM_QDRANT_CONSUMER_GROUP", "aikyam-qdrant-indexer-v1")
 
 CLIP_MODEL_ENABLED = os.getenv("AIKYAM_CLIP_MODEL_ENABLED", "false").lower() == "true"
-CLIP_MODEL_NAME = os.getenv("AIKYAM_CLIP_MODEL_NAME", "openai/clip-vit-base-patch32")
+CLIP_MODEL_NAME = os.getenv("AIKYAM_CLIP_MODEL_NAME", "openai/clip-vit-base-patch16")
 
 WHISPER_MODEL_ENABLED = os.getenv("AIKYAM_WHISPER_MODEL_ENABLED", "false").lower() == "true"
 WHISPER_MODEL_SIZE = os.getenv("AIKYAM_WHISPER_MODEL_SIZE", "tiny")
