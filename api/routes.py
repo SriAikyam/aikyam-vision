@@ -83,6 +83,8 @@ class VisionResponse(BaseModel):
     flagged: bool = False
     moderation_action: str = "ALLOW"
     moderation_reasons: list[str] = []
+    primary_pillar: str = "NEUTRAL_CONTENT"
+    is_devotional: bool = False
 
 
 @app.get("/health")
@@ -175,4 +177,6 @@ def _to_response(post_id: str, r: VisionResult) -> VisionResponse:
         flagged=r.flagged,
         moderation_action=r.moderation_action,
         moderation_reasons=r.moderation_reasons,
+        primary_pillar=r.primary_pillar,
+        is_devotional=r.is_devotional,
     )

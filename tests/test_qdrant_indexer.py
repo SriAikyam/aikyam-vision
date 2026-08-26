@@ -65,3 +65,52 @@ def test_qdrant_indexer_skip_invalid_embedding(mock_kafka, mock_qdrant_client):
     indexer._handle_event(invalid_payload)
 
     mock_qdrant_instance.upsert.assert_not_called()
+
+
+@patch("worker.qdrant_indexer.QdrantClient")
+@patch("worker.qdrant_indexer.KafkaConsumer")
+def test_qdrant_indexer_skip_blocked_content(mock_kafka, mock_qdrant_client):
+    # Blocked (non-devotional) posts must never be indexed, so the recommendation
+    # service can't surface them even if it forgets to filter on moderation_action.
+    mock_qdrant_instance = MagicMock()
+    mock_qdrant_client.return_value = mock_qdrant_instance
+    mock_qdrant_instance.get_collections.return_value.collections = []
+
+    indexer = QdrantIndexerWorker()
+
+    blocked_payload = {
+        "postId": "post_67890",
+        "moderationAction": "BLOCK",
+        "isDevotional": False,
+        "imageEmbedding": [0.1] * 512,
+    }
+
+    indexer._handle_event(blocked_payload)
+
+    mock_qdrant_instance.upsert.assert_not_called()
+
+
+@patch("worker.qdrant_indexer.QdrantClient")
+@patch("worker.qdrant_indexer.KafkaConsumer")
+def test_qdrant_indexer_forwards_pillar_fields(mock_kafka, mock_qdrant_client):
+    mock_qdrant_instance = MagicMock()
+    mock_qdrant_client.return_value = mock_qdrant_instance
+    mock_qdrant_instance.get_collections.return_value.collections = []
+
+    indexer = QdrantIndexerWorker()
+
+    valid_payload = {
+        "postId": "post_12345",
+        "moderationAction": "ALLOW",
+        "primaryPillar": "SACRED_DEVOTIONAL",
+        "isDevotional": True,
+        "assetUrl": "https://cdn.shriaikyam.com/media/abc123/source.jpg",
+        "imageEmbedding": [0.1] * 512,
+    }
+
+    indexer._handle_event(valid_payload)
+
+    points = mock_qdrant_instance.upsert.call_args.kwargs["points"]
+    assert points[0].payload["primary_pillar"] == "SACRED_DEVOTIONAL"
+    assert points[0].payload["is_devotional"] is True
+    assert points[0].payload["asset_url"] == "https://cdn.shriaikyam.com/media/abc123/source.jpg"

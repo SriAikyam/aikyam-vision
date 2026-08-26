@@ -149,6 +149,22 @@ CLUSTER_PROMPTS: dict[str, list[str]] = {
         "a photograph of a crescent moon and star symbol on a mosque or Islamic building"
     ],
 
+    "buddhist_iconography": [
+        "a photograph of a seated Buddha statue with legs crossed in meditation posture, elongated earlobes, and a serene expression",
+        "a Buddha statue draped in a saffron or gold robe over one shoulder, seated cross-legged in a calm meditative pose",
+        "a golden or bronze Buddha statue with a pointed cranial protrusion and half-closed eyes inside a temple or shrine",
+        "a photograph of a Buddhist temple or pagoda with a large Buddha statue as the central figure",
+        "a photograph of a standing or reclining Buddha statue in a Buddhist shrine"
+    ],
+
+    "sikh_iconography": [
+        "a photograph of the Guru Granth Sahib holy scripture placed on a decorated platform under a canopy in a Sikh Gurdwara",
+        "a photograph of a Sikh Gurdwara interior with a golden Khanda symbol of crossed swords and a circular chakkar displayed",
+        "a photograph of a Sikh man wearing a turban and long beard inside a Gurdwara",
+        "a photograph of the Ik Onkar symbol displayed on a wall or railing in a Sikh place of worship",
+        "a photograph of a Gurdwara exterior with a white dome and an orange Nishan Sahib flag pole"
+    ],
+
     # ==========================================
     # PILLAR 2: UNSAFE_CONTENT (SAFETY VIOLATIONS)
     # ==========================================
@@ -179,16 +195,23 @@ CLUSTER_PROMPTS: dict[str, list[str]] = {
         "a photograph of alcoholic beverage bottles or glasses of beer, wine, or liquor",
         "a photograph of a person drinking or holding an alcoholic drink at a bar or party",
         "a photograph of illegal drug paraphernalia such as pipes, syringes, or powder",
-        "a photograph of a person smoking a cigarette or using tobacco",
         "a photograph of a bar counter or nightclub with bottles of liquor and drinking glasses"
+    ],
+
+    "tobacco": [
+        "a photograph of a cigarette pack or tobacco product box with a brand label, shown as a product photo",
+        "a person holding a lit cigarette between their fingers close to their mouth, with visible smoke",
+        "a close-up of a hand rolling or holding a hand-rolled cigarette, tobacco rolling paper visible",
+        "a person smoking a cigar, pipe, or hookah with visible smoke",
+        "a person lighting a cigarette with a lighter or match, cigarette held near the lips"
     ],
 
     "modern_nightlife_and_parties": [
         "a photograph of a crowd dancing inside a nightclub with flashing colored lights and a DJ booth",
         "a photograph of a party with loud music, a dance floor, and a large group of people dancing",
-        "a photograph of a rooftop or lounge party with people socializing and music playing at night",
-        "a photograph of a concert or rave with stage lighting, smoke effects, and a dancing crowd",
-        "a photograph of a birthday or club party with balloons, dancing, and celebratory lighting"
+        "a photograph of a crowded rooftop or lounge bar at night with people drinking and socializing in a nightlife venue",
+        "a photograph of a concert or rave with a stage, colored stage lighting, and a large dancing crowd packed together",
+        "a photograph of a birthday or club party with balloons, a large group of people, and dancing"
     ],
 
     "commercial_spam_and_flyers": [

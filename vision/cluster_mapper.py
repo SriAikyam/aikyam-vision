@@ -173,6 +173,8 @@ class VisionResult:
     flagged: bool = False
     moderation_action: str = "ALLOW"
     moderation_reasons: list[str] = field(default_factory=list)
+    primary_pillar: str = "NEUTRAL_CONTENT"
+    is_devotional: bool = False
 
 
 class ClusterMapper:
@@ -247,6 +249,8 @@ class ClusterMapper:
         result.moderation_reasons = mod.reasons
         result.primary_deity = mod.primary_deity
         result.category_type_scores = mod.category_type_scores
+        result.primary_pillar = mod.primary_pillar
+        result.is_devotional = mod.is_devotional
         return result
 
     def score_video(self, video_path: str | Path, caption: str = "") -> VisionResult:
@@ -325,6 +329,8 @@ class ClusterMapper:
         result.moderation_reasons = mod.reasons
         result.primary_deity = mod.primary_deity
         result.category_type_scores = mod.category_type_scores
+        result.primary_pillar = mod.primary_pillar
+        result.is_devotional = mod.is_devotional
         return result
 
     def score_text(self, caption: str) -> VisionResult:
@@ -340,6 +346,8 @@ class ClusterMapper:
         result.moderation_reasons = mod.reasons
         result.primary_deity = mod.primary_deity
         result.category_type_scores = mod.category_type_scores
+        result.primary_pillar = mod.primary_pillar
+        result.is_devotional = mod.is_devotional
         return result
 
     def readiness(self) -> dict:

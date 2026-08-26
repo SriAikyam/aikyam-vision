@@ -75,7 +75,7 @@ class VisionWorker:
             except Exception as exc:
                 logger.error("Failed to deserialize or process message: %s", exc)
 
-    def _resolve_media_items(self, payload: dict) -> list[tuple[str, str]]:
+    def _resolve_media_items(self, payload: dict) -> list[tuple[str, str, str]]:
         media_items = []
         media_list = payload.get("media", []) or []
         for m in media_list:
@@ -86,7 +86,7 @@ class VisionWorker:
                 asset_type = (m.get("assetType") or "IMAGE").upper()
                 ext = "source.mp4" if asset_type in ("VIDEO", "REEL") else "source.jpg"
                 url = f"{AIKYAM_CDN_BASE_URL}/{asset_id}/{ext}"
-                media_items.append((url, asset_type))
+                media_items.append((url, asset_type, asset_id))
         return media_items
 
     def _handle(self, payload: dict):
@@ -103,15 +103,22 @@ class VisionWorker:
             return
 
         result: VisionResult | None = None
+        used_url = ""
+        used_asset_id = ""
+        used_media_type = "IMAGE"
 
         if media_items:
-            for url, asset_type in media_items[:3]:
+            for url, asset_type, asset_id in media_items[:3]:
                 r = self._analyze_media(url, asset_type, caption)
                 if r is not None:
                     result = r
+                    used_url = url
+                    used_asset_id = asset_id
+                    used_media_type = asset_type
                     break
         elif caption:
             result = self._mapper.score_text(caption)
+            used_media_type = "TEXT"
 
         if result is None:
             logger.warning("vision_no_result post_id=%s", post_id)
@@ -123,7 +130,9 @@ class VisionWorker:
                 post_id, entity_id,
             )
 
-        self._publish_vision_scores(post_id, result)
+        self._publish_vision_scores(
+            post_id, result, asset_id=used_asset_id, media_type=used_media_type, asset_url=used_url,
+        )
 
     def _analyze_media(self, url: str, asset_type: str, caption: str) -> VisionResult | None:
         try:
@@ -149,7 +158,9 @@ class VisionWorker:
             logger.warning("vision_download_failed url=%s error=%s", url, exc)
             return None
 
-    def _publish_vision_scores(self, post_id: str, result: VisionResult, asset_id: str = "", media_type: str = "IMAGE"):
+    def _publish_vision_scores(
+        self, post_id: str, result: VisionResult, asset_id: str = "", media_type: str = "IMAGE", asset_url: str = "",
+    ):
         """
         Publish cluster scores and embeddings to Kafka.
         Streams full rich events containing embeddings and scores to VISION_SCORES_TOPIC.
@@ -158,6 +169,7 @@ class VisionWorker:
         message = {
             "postId":            post_id,
             "assetId":           asset_id,
+            "assetUrl":          asset_url,
             "mediaType":         media_type.lower(),
             "clusters":          result.clusters,
             "confidence":        result.confidence,
@@ -166,6 +178,8 @@ class VisionWorker:
             "imageEmbedding":    result.image_embedding,
             "primaryDeity":      result.primary_deity,
             "categoryTypeScores": result.category_type_scores,
+            "primaryPillar":     result.primary_pillar,
+            "isDevotional":      result.is_devotional,
             "flagged":           result.flagged,
             "moderationAction":  result.moderation_action,
             "moderationReasons": result.moderation_reasons,

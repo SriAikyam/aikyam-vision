@@ -90,18 +90,29 @@ class QdrantIndexerWorker:
             logger.warning("qdrant_skip_invalid_event post_id=%s has_embedding=%s", post_id, bool(embedding))
             return
 
+        # Platform policy: only devotional content is discoverable. BLOCKed posts are
+        # never indexed at all -- a defense-in-depth veto so the recommendation service
+        # can't surface them even if it forgets to filter on moderation_action itself.
+        moderation_action = payload.get("moderationAction", "ALLOW")
+        if moderation_action == "BLOCK":
+            logger.info("qdrant_skip_blocked_content post_id=%s", post_id)
+            return
+
         # Generate deterministic UUID for Qdrant point based on post_id
         point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, post_id))
 
         point_payload = {
             "post_id":              post_id,
             "asset_id":             payload.get("assetId", ""),
+            "asset_url":            payload.get("assetUrl", ""),
             "media_type":           payload.get("mediaType", "image"),
             "primary_deity":        payload.get("primaryDeity"),
             "category_type_scores": payload.get("categoryTypeScores", {}),
+            "primary_pillar":       payload.get("primaryPillar"),
+            "is_devotional":        payload.get("isDevotional", False),
             "clusters":             payload.get("clusters", {}),
             "confidence":           payload.get("confidence", 0.0),
-            "moderation_action":    payload.get("moderationAction", "ALLOW"),
+            "moderation_action":    moderation_action,
             "flagged":              payload.get("flagged", False),
             "moderation_reasons":   payload.get("moderationReasons", []),
             "created_at":           payload.get("createdAt", ""),
