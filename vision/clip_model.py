@@ -33,7 +33,8 @@ CLUSTER_PROMPTS: dict[str, list[str]] = {
         "a photograph of blue-skinned Lord Vishnu reclining on the giant multi-headed coiled serpent Sheshnag",
         "a photograph of a Lord Vishnu statue wearing a gold crown and fresh flower garlands",
         "a small idol of Lord Vishnu placed in a temple background",
-        "a photo of Lord Vishnu inside a temple sanctum"
+        "a photo of Lord Vishnu inside a temple sanctum",
+        "a photograph of a four-armed deity idol, distinct from two-armed Krishna or Venkateswara, holding four different objects"
     ],
 
     "venkateswara_iconography": [
@@ -93,6 +94,15 @@ CLUSTER_PROMPTS: dict[str, list[str]] = {
         "a photograph of lit brass diya oil lamps arranged on floor during Diwali festival",
         "a photograph of people celebrating Holi festival with bright organic gulal color powders",
         "a photograph of a colorful rangoli floor art design made with powders and flower petals"
+    ],
+
+    "yoga_and_meditation": [
+        "a photograph of a person performing a yoga asana pose on a mat, outdoors or in a studio",
+        "a photograph of a person sitting cross-legged in padmasana lotus position meditating with eyes closed",
+        "a photograph of a yoga instructor demonstrating a balancing or stretching pose",
+        "a photograph of a person practicing pranayama breathing exercises in a seated posture",
+        "a wide photograph of a group yoga class practicing asanas together on mats",
+        "a photograph of a sadhu or yogi meditating in the Himalayas or on a riverbank at an ashram"
     ],
 
     "safe_everyday_life": [

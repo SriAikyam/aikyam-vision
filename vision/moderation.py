@@ -66,6 +66,7 @@ CLUSTER_TO_CATEGORY_TYPE: dict[str, CategoryType] = {
 
     # 3. PILLAR 3: NEUTRAL_CONTENT
     "safe_everyday_life": CategoryType.NEUTRAL_CONTENT,
+    "yoga_and_meditation": CategoryType.NEUTRAL_CONTENT,
     "modern_vehicles_and_tech": CategoryType.NEUTRAL_CONTENT,
     "sports_and_recreation": CategoryType.NEUTRAL_CONTENT,
     "medical_and_healthcare": CategoryType.NEUTRAL_CONTENT,
