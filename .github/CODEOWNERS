@@ -1,0 +1,8 @@
+# Every PR must be approved by at least one code owner before it can merge
+# (enforced via required_pull_request_reviews.require_code_owner_reviews on the default branch).
+#
+# NOTE: GitHub resolves code ownership per line as OR, not AND -- a single approval
+# from either team below satisfies this file. Branch protection separately requires
+# 2 total approvals, but it cannot enforce "one from Aikyam-leads AND one from
+# Aikyam-Engineering specifically" -- that would require a custom status check.
+* @SriAikyam/aikyam-leads @SriAikyam/aikyam-engineering
